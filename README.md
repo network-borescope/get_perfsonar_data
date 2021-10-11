@@ -1,5 +1,5 @@
 # Executando
-``python get_full_data <src> <dst> <test-type>`` OR ``python get_full_data <src> <dst> <test-type> <event-type``
+``python get_full_data.py <src> <dst> <test-type>`` OR ``python get_full_data.py <src> <dst> <test-type> <event-type``
 
 - src: sigla do estado de origem
 - dst: sigla do estado de destino
@@ -13,8 +13,8 @@
 ## Exemplos
 Pega todos os dados de Banda(BBR) entre os PoPs do Distrito Federal(origem) e São Paulo(destino).
 
-``python get_full_data df sp banda_bbr``
+``python get_full_data.py df sp banda_bbr``
 
 Pega todos os dados do evento throughput do teste Banda(BBR) entre os PoPs do Distrito Federal(origem) e São Paulo(destino).
 
-``python get_full_data df sp banda_bbr throughput``
+``python get_full_data.py df sp banda_bbr throughput``
