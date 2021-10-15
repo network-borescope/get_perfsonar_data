@@ -24,47 +24,108 @@ def load_pops(filename="pop_lat_lon.txt"):
     pops = {}
     with open(filename) as f:
         for line in f:
-            name, lat, lon = line.strip().split(";")
+            name, lat, lon, cod = line.strip().split(";")
 
-            pops[name] = (lat, lon)
+            pops[name] = (lat, lon, cod)
 
     return pops
 
+def div_mil(val):
+    return int(val / 1000 + 0.5)
+
+def mult_mil(val):
+    return int(val * 1000 + 0.5)
+
 # eventos multivalorados: o campo val eh uma lista ou um objeto
 def failures_data(item):
-    return "2"
+    return [2]
 
+def process_subinterval(subinterval):
+    v_min = 100000000
+    v_max = 0
+    acc, n = 0, 0
+    #print(hist)
+    for item in subinterval["val"]:
+        #val = int(item["val"] / 1000 + 0.5)
+        val = item["val"]
+        acc = acc + val
+        n = n + 1
+        if val < v_min: v_min = val
+        if val > v_max: v_max = val
+    
+    if n == 0: return [0, 0, 0]
+    #avg = int((acc/n)+0.5)
+    avg = acc/n
+
+    return [avg, v_min, v_max]
 
 def packet_retransmits_subintervals_data(item):
-    return "2"
-
+    return process_subinterval(item)
 
 def throughput_subintervals_data(item):
-    return "2"
+    return process_subinterval(item)
 
+
+def process_histogram(hist):
+    v_min = 100000000
+    v_max = 0
+    acc, n = 0, 0
+    #print(hist)
+    for k,v in hist["val"].items():
+        #val = int(float(k) * 1000 + 0.5)
+        val = float(k)
+        acc = acc + val * v
+        n = n + v
+        if val < v_min: v_min = val
+        if val > v_max: v_max = val
+    
+    if n == 0: return [0, 0, 0]
+    #avg = int((acc/n)+0.5)
+    avg = acc/n
+
+    return [avg, v_min, v_max]
 
 def histogram_rtt_data(item):
-    return "2"
+    return process_histogram(item)
 
 
 def histogram_rtt_reverse_data(item):
-    return "2"
+    return process_histogram(item)
 
 
 def histogram_owdelay_data(item):
-    return "2"
+    return process_histogram(item)
 
 
 def histogram_ttl_data(item):
-    return "2"
+    return process_histogram(item)
 
 
 def histogram_ttl_reverse_data(item):
-    return "2"
+    return process_histogram(item)
 
+
+def process_traceroute(vet):
+    v_min = 100000000
+    v_max = 0
+    acc, n = 0, 0
+    #print(hist)
+    for item in vet["val"]:
+        #val = int(item["val"] / 1000 + 0.5)
+        val = item.get("rtt", 0.0)
+        acc = acc + val
+        n = n + 1
+        if val < v_min: v_min = val
+        if val > v_max: v_max = val
+    
+    if n == 0: return [0, 0, 0, 0, 0]
+    #avg = int((acc/n)+0.5)
+    avg = acc/n
+
+    return [avg, v_min, v_max, n/1000, acc] # media rtt, min_rtt, max_rtt, max_ttl, acc_rtt
 
 def packet_trace_data(item):
-    return "2"
+    return process_traceroute(item)
 
 
 def pscheduler_run_href_data(item):
@@ -73,63 +134,66 @@ def pscheduler_run_href_data(item):
 
 # eventos nao multivalorados
 def packet_retransmits_data(item):
-    return str(item["val"])
+    return [item["val"]]
 
 
 def packet_count_lost_bidir_data(item):
-    return str(item["val"])
+    return [item["val"]]
 
 
 def packet_count_sent_data(item):
-    return str(item["val"])
+    return [item["val"]]
 
 
 def packet_duplicates_bidir_data(item):
-    return str(item["val"])
+    return [item["val"]]
 
 
 def packet_loss_rate_bidir_data(item):
-    return str(item["val"])
+    return [item["val"]]
 
 
 def packet_reorders_bidir_data(item):
-    return str(item["val"])
+    return [item["val"]]
 
 def packet_count_lost_data(item):
-    return str(item["val"])
+    return [item["val"]]
 
 
 def packet_duplicates_data(item):
-    return str(item["val"])
+    return [item["val"]]
 
 
 def packet_loss_rate_data(item):
-    return str(item["val"])
+    return [item["val"]]
 
 
 def packet_reorders_data(item):
-    return str(item["val"])
+    return [item["val"]]
 
 
 def time_error_estimates_data(item):
-    return str(item["val"])
+    return [item["val"]]
 
 
 def path_mtu_data(item):
-    return str(item["val"])
+    return [item["val"]]
 
 
 def throughput_data(item):
-    val = str(item["val"])
-    val2 = str(int(item["val"]/1000))
+    #val = str(item["val"]) # bit/s
+    #val2 = str(int(item["val"]/1000))
 
-    return val + SEP + val2
+    #return val + SEP + val2
+    return [item["val"]/1000]
 
 
-def get_data(path, lat, lon, src, dst, data, data_function):
+def get_data(path, lat, lon, src_cod, dst_cod, data, data_function_codes):
     f = None
     filename = None
-
+    data_function = data_function_codes[0]
+    codes = data_function_codes[1]
+    convert_function = data_function_codes[2]
     for item in data:
         data = str(time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(item["ts"] - FUSO_BRASIL)))
 
@@ -141,10 +205,21 @@ def get_data(path, lat, lon, src, dst, data, data_function):
             f = open(path + "/" + filename + "_00_00.csv", "w")
             print("Gerando: " + path + "/" + filename + "_00_00.csv")
 
-        line = data + SEP + lat + SEP + lon + SEP
-        line += data_function(item) + SEP + src + SEP + dst
+        line_prefix = data + SEP + lat + SEP + lon + SEP
+        line_sufix = SEP + src_cod + SEP + dst_cod
+        results = data_function(item)
 
-        print(line, file=f)
+        if len(codes) != len(results):
+            print("Fatal Erro 249")
+            return
+
+        for i in range(len(codes)):
+            #v = results[i]
+            v = convert_function(results[i])
+            code = codes[i]
+            line = line_prefix + str(v) + line_sufix + SEP + str(code)
+
+            print(line, file=f)
 
     if not f.closed:
         f.close()
@@ -183,22 +258,45 @@ def response_check(url, response_code):
 
     return False
 
-def get_events_data(metadata_keys, lat, lon, path, event_type):
+def get_events_data(metadata_keys, lat, lon, src_cod, dst_cod, path, event_type, test_type):
     # events = {"event_name": function}
     events = {
-    "failures": failures_data, "packet-retransmits": packet_retransmits_data,
-    "packet-retransmits-subintervals": packet_retransmits_subintervals_data,
-    "throughput": throughput_data, "throughput-subintervals": throughput_subintervals_data,
-    "histogram-rtt": histogram_rtt_data, "histogram-rtt-reverse": histogram_rtt_reverse_data,
-    "packet-count-lost-bidir": packet_count_lost_bidir_data, "packet-count-sent": packet_count_sent_data,
-    "packet-duplicates-bidir": packet_duplicates_bidir_data, "packet-loss-rate-bidir": packet_loss_rate_bidir_data,
-    "packet-reorders-bidir": packet_reorders_bidir_data, "histogram-owdelay": histogram_owdelay_data,
-    "histogram-ttl": histogram_ttl_data, "histogram-ttl-reverse": histogram_ttl_reverse_data,
-    "packet-count-lost": packet_count_lost_data, "packet-count-sent": packet_count_sent_data, 
-    "packet-duplicates": packet_duplicates_data, "packet-loss-rate": packet_loss_rate_data, 
-    "packet-reorders": packet_reorders_data, "packet-trace": packet_trace_data,
-    "time-error-estimates": time_error_estimates_data, "path-mtu": path_mtu_data, 
-    "pscheduler-run-href": pscheduler_run_href_data
+    "banda_bbr.failures": (failures_data, [70], int),
+    "banda_bbr.packet-retransmits": (packet_retransmits_data, [71], int),
+    "banda_bbr.packet-retransmits-subintervals": (packet_retransmits_subintervals_data, [72, 73, 74], int),
+    "banda_bbr.throughput": (throughput_data, [77], int),
+    "banda_bbr.throughput-subintervals": (throughput_subintervals_data, [78, 79, 80], div_mil),
+
+    "banda_cubic.failures": (failures_data, [100], int),
+    "banda_cubic.packet-retransmits": (packet_retransmits_data, [101], int),
+    "banda_cubic.packet-retransmits-subintervals": (packet_retransmits_subintervals_data, [102, 103, 104], int),
+    "banda_cubic.throughput": (throughput_data, [107], int),
+    "banda_cubic.throughput-subintervals": (throughput_subintervals_data, [108, 109, 110], div_mil),
+
+    "atraso_bi.failures": (failures_data, [10], int),
+    "atraso_bi.histogram-rtt": (histogram_rtt_data, [11, 12, 13], mult_mil),
+    "atraso_bi.histogram-ttl-reverse": (histogram_rtt_reverse_data, [16, 17, 18], int),
+    "atraso_bi.packet-count-lost-bidir": (packet_count_lost_bidir_data, [21], int),
+    "atraso_bi.packet-count-sent": (packet_count_sent_data, [22], int),
+    "atraso_bi.packet-duplicates-bidir": (packet_duplicates_bidir_data, [23], int),
+    "atraso_bi.packet-loss-rate-bidir": (packet_loss_rate_bidir_data, [24], int),
+    "atraso_bi.packet-reorders-bidir": (packet_reorders_bidir_data, [25], int),
+
+    "atraso_uni.failures": (failures_data, [40], int),
+    "atraso_uni.histogram-owdelay": (histogram_owdelay_data, [41, 42, 43], mult_mil),
+    "atraso_uni.histogram-ttl": (histogram_ttl_data, [46, 47, 48], int),
+    "atraso_uni.packet-count-lost": (packet_count_lost_data, [51], int),
+    "atraso_uni.packet-count-sent": (packet_count_sent_data, [52], int),
+    "atraso_uni.packet-duplicates": (packet_duplicates_data, [53], int),
+    "atraso_uni.packet-loss-rate": (packet_loss_rate_data, [54], mult_mil), # enviados/perdidos
+    "atraso_uni.packet-reorders": (packet_reorders_data, [55], int),
+
+    "traceroute.failures": (failures_data, [130], int),
+    "traceroute.packet-trace": (packet_trace_data, [131, 132, 133, 134, 135], mult_mil),
+    # "traceroute.time-error-estimates": (time_error_estimates_data, [], func),
+    # "traceroute.path-mtu": (path_mtu_data, [], func),
+    
+    # "pscheduler-run-href": pscheduler_run_href_data
     }
     
     for metadata_key in metadata_keys:
@@ -210,6 +308,9 @@ def get_events_data(metadata_keys, lat, lon, path, event_type):
             
             result2 = response.json()
 
+            #domain = "banda_bbr"
+            #domain = "atraso_bi"
+            domain = test_type
             event_name = event.split("/")[-2]
             file_path = path + "/" + event_name + "/" + src + "/" + dst
             #create_folder(file_path)
@@ -218,19 +319,18 @@ def get_events_data(metadata_keys, lat, lon, path, event_type):
 
             if len(result2) == 0: continue # o evento nao possui dados para aquele periodo
 
-            if event_name not in events:
-                print(event_name)
+            key = domain + "." + event_name
+            if key not in events:
+                print("\""+key+"\"")
+                print(events)
                 continue
 
-            get_data(file_path, lat, lon, src, dst, result2, events[event_name])
+            get_data(file_path, lat, lon, src_cod, dst_cod, result2, events[key])
 
 
 
 
-def main(src, dst, interface, test_id, path, event_type):
-    pops = load_pops()
-    lat, lon = pops[src]
-
+def main(src, dst, interface, test_id, path, event_type, test_type):  
     url = build_url(src, dst, interface, test_id)
     print("URL:", url, "\n")
     response = requests.get(url)
@@ -247,8 +347,12 @@ def main(src, dst, interface, test_id, path, event_type):
         count += 1
         print(str(count) + ") " + metadata_key)
     print("END METADATA KEYS\n")
+    
+    pops = load_pops()
+    lat, lon, src_cod = pops[src]
+    dst_cod = pops[dst][2]
 
-    get_events_data(metadata_keys, lat, lon, path, event_type)
+    get_events_data(metadata_keys, lat, lon, src_cod, dst_cod, path, event_type, test_type)
 
 
 
@@ -305,4 +409,4 @@ if __name__ == "__main__":
     #path += "/" + src + "/" + dst
     interface = interfaces[test_type]
     #create_folders(path)
-    main(src, dst, interface, test_id, path, event_type)
+    main(src, dst, interface, test_id, path, event_type, test_type)
