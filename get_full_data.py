@@ -2,6 +2,8 @@ import requests
 import time
 import sys
 import os
+import getopt
+import datetime
 
 # GLOBALS
 FUSO_BRASIL = 10800 # precisa tirar a diferenca do gmtime
@@ -203,7 +205,7 @@ def get_data(path, lat, lon, src_cod, dst_cod, data, data_function_codes):
             if f is not None: f.close()
             filename = new_filename
             f = open(path + "/" + filename + "_00_00.csv", "w")
-            print("Gerando: " + path + "/" + filename + "_00_00.csv")
+            # print("Gerando: " + path + "/" + filename + "_00_00.csv")
 
         line_prefix = data + SEP + lat + SEP + lon + SEP
         line_sufix = SEP + src_cod + SEP + dst_cod
@@ -224,11 +226,12 @@ def get_data(path, lat, lon, src_cod, dst_cod, data, data_function_codes):
     if not f.closed:
         f.close()
 
-def build_url(src, dst, interface, test_id):
+def build_url(src, dst, interface, test_id, time_start):
     source = "monipe-"+src+"-"+interface+".rnp.br"
     destination = "monipe-"+dst+"-"+interface+".rnp.br"
+    str_time_start = "time-start="+str(time_start)
 
-    url = BASE+ "/" + "?source="+source+"&destination="+destination+"&"+test_id
+    url = BASE+ "/" + "?source="+source+"&destination="+destination+"&"+test_id+"&"+str_time_start
 
     return url
 
@@ -236,10 +239,16 @@ def build_url(src, dst, interface, test_id):
 def get_metadata_keys_info(data, metadata_keys:dict):
     for obj in data:
         metadata_keys[obj["metadata-key"]] = {}
+        metadata_keys[obj["metadata-key"]]["last_update"] = None
         metadata_keys[obj["metadata-key"]]["events_base_uri"] = []
         metadata_keys[obj["metadata-key"]]["events_summaries_uri"] = []
 
         for event in obj["event-types"]:
+            if metadata_keys[obj["metadata-key"]]["last_update"] is None:
+                metadata_keys[obj["metadata-key"]]["last_update"] = event["time-updated"]
+            elif event["time-updated"] is not None and event["time-updated"] > metadata_keys[obj["metadata-key"]]["last_update"]:
+                metadata_keys[obj["metadata-key"]]["last_update"] = event["time-updated"]
+
             metadata_keys[obj["metadata-key"]]["events_base_uri"].append(event["base-uri"])
 
             n = len(event["summaries"])
@@ -258,8 +267,9 @@ def response_check(url, response_code):
 
     return False
 
-def get_events_data(metadata_keys, lat, lon, src_cod, dst_cod, path, event_type, test_type):
-    # events = {"event_name": function}
+
+def get_events_data(metadata_keys, lat, lon, src, dst, src_cod, dst_cod, path, event_type, test_type, time_start, time_end):
+    # events = {"event_name": (data_function, codes list, aux_function)}
     events = {
     "banda_bbr.failures": (failures_data, [70], int),
     "banda_bbr.packet-retransmits": (packet_retransmits_data, [71], int),
@@ -273,23 +283,23 @@ def get_events_data(metadata_keys, lat, lon, src_cod, dst_cod, path, event_type,
     "banda_cubic.throughput": (throughput_data, [107], int),
     "banda_cubic.throughput-subintervals": (throughput_subintervals_data, [108, 109, 110], div_mil),
 
-    "atraso_bi.failures": (failures_data, [10], int),
-    "atraso_bi.histogram-rtt": (histogram_rtt_data, [11, 12, 13], mult_mil),
-    "atraso_bi.histogram-ttl-reverse": (histogram_rtt_reverse_data, [16, 17, 18], int),
-    "atraso_bi.packet-count-lost-bidir": (packet_count_lost_bidir_data, [21], int),
-    "atraso_bi.packet-count-sent": (packet_count_sent_data, [22], int),
-    "atraso_bi.packet-duplicates-bidir": (packet_duplicates_bidir_data, [23], int),
-    "atraso_bi.packet-loss-rate-bidir": (packet_loss_rate_bidir_data, [24], int),
-    "atraso_bi.packet-reorders-bidir": (packet_reorders_bidir_data, [25], int),
+    "atraso_bidir.failures": (failures_data, [10], int),
+    "atraso_bidir.histogram-rtt": (histogram_rtt_data, [11, 12, 13], mult_mil),
+    "atraso_bidir.histogram-ttl-reverse": (histogram_rtt_reverse_data, [16, 17, 18], int),
+    "atraso_bidir.packet-count-lost-bidir": (packet_count_lost_bidir_data, [21], int),
+    "atraso_bidir.packet-count-sent": (packet_count_sent_data, [22], int),
+    "atraso_bidir.packet-duplicates-bidir": (packet_duplicates_bidir_data, [23], int),
+    "atraso_bidir.packet-loss-rate-bidir": (packet_loss_rate_bidir_data, [24], int),
+    "atraso_bidir.packet-reorders-bidir": (packet_reorders_bidir_data, [25], int),
 
-    "atraso_uni.failures": (failures_data, [40], int),
-    "atraso_uni.histogram-owdelay": (histogram_owdelay_data, [41, 42, 43], mult_mil),
-    "atraso_uni.histogram-ttl": (histogram_ttl_data, [46, 47, 48], int),
-    "atraso_uni.packet-count-lost": (packet_count_lost_data, [51], int),
-    "atraso_uni.packet-count-sent": (packet_count_sent_data, [52], int),
-    "atraso_uni.packet-duplicates": (packet_duplicates_data, [53], int),
-    "atraso_uni.packet-loss-rate": (packet_loss_rate_data, [54], mult_mil), # enviados/perdidos
-    "atraso_uni.packet-reorders": (packet_reorders_data, [55], int),
+    "atraso_unidir.failures": (failures_data, [40], int),
+    "atraso_unidir.histogram-owdelay": (histogram_owdelay_data, [41, 42, 43], mult_mil),
+    "atraso_unidir.histogram-ttl": (histogram_ttl_data, [46, 47, 48], int),
+    "atraso_unidir.packet-count-lost": (packet_count_lost_data, [51], int),
+    "atraso_unidir.packet-count-sent": (packet_count_sent_data, [52], int),
+    "atraso_unidir.packet-duplicates": (packet_duplicates_data, [53], int),
+    "atraso_unidir.packet-loss-rate": (packet_loss_rate_data, [54], mult_mil), # enviados/perdidos
+    "atraso_unidir.packet-reorders": (packet_reorders_data, [55], int),
 
     "traceroute.failures": (failures_data, [130], int),
     "traceroute.packet-trace": (packet_trace_data, [131, 132, 133, 134, 135], mult_mil),
@@ -298,31 +308,34 @@ def get_events_data(metadata_keys, lat, lon, src_cod, dst_cod, path, event_type,
     
     # "pscheduler-run-href": pscheduler_run_href_data
     }
-    
+
+    str_time_start = "?time-start=" + str(time_start)
+    str_time_end = ""
+    if time_end is not None: str_time_end = "&time-end=" + str(time_end)
+    str_limit = "&limit=" + str(1000000000)
+
     for metadata_key in metadata_keys:
         for event in metadata_keys[metadata_key]["events_base_uri"]:
             if event_type is not None and event_type+"/" not in event: continue
 
-            response = requests.get(BASE+event) # pega todos os dados daquele evento
-            if response_check(BASE+event, response.status_code): continue
+
+            url = BASE+event+str_time_start+str_time_end+str_limit
+            response = requests.get(url) # pega todos os dados daquele evento
+            if response_check(url, response.status_code): continue
             
             result2 = response.json()
 
-            #domain = "banda_bbr"
-            #domain = "atraso_bi"
+
             domain = test_type
             event_name = event.split("/")[-2]
-            file_path = path + "/" + event_name + "/" + src + "/" + dst
-            #create_folder(file_path)
+            file_path = path + "/" + event_name.replace("-", "_") + "/" + src + "/" + dst
             create_folders(file_path)
-
 
             if len(result2) == 0: continue # o evento nao possui dados para aquele periodo
 
             key = domain + "." + event_name
             if key not in events:
                 print("\""+key+"\"")
-                print(events)
                 continue
 
             get_data(file_path, lat, lon, src_cod, dst_cod, result2, events[key])
@@ -330,83 +343,127 @@ def get_events_data(metadata_keys, lat, lon, src_cod, dst_cod, path, event_type,
 
 
 
-def main(src, dst, interface, test_id, path, event_type, test_type):  
-    url = build_url(src, dst, interface, test_id)
-    print("URL:", url, "\n")
-    response = requests.get(url)
-    if response_check(url, response.status_code): return
-    result1 = response.json()
+def main(interface, test_id, path, event_type, test_type, time_start, time_end):
 
-    metadata_keys = {}
-
-    get_metadata_keys_info(result1, metadata_keys)
-
-    count = 0
-    print("BEGIN METADATA KEYS")
-    for metadata_key in metadata_keys:
-        count += 1
-        print(str(count) + ") " + metadata_key)
-    print("END METADATA KEYS\n")
+    hash_mk = {}
+    #pops0 = ["df", "sp"] # test
+    pops = ["ac","al","am","ap","ba","ce","df","es","go","ma","mg","ms","mt","pa","pb","pe","pi","pr","rj","rn","ro","rr","rs","sc","se","sp","to"]
     
-    pops = load_pops()
-    lat, lon, src_cod = pops[src]
-    dst_cod = pops[dst][2]
+    for src in pops:
+        for dst in pops:
+            if src == dst: continue
+            
+            key = src + dst
+            url = build_url(src, dst, interface, test_id, time_start)
+            #print("URL:", url, "\n")
+            response = requests.get(url)
+            if response_check(url, response.status_code): return
+            result1 = response.json()
 
-    get_events_data(metadata_keys, lat, lon, src_cod, dst_cod, path, event_type, test_type)
+            metadata_keys = {}
+
+            get_metadata_keys_info(result1, metadata_keys)
+            hash_mk[key] = metadata_keys
+         
+    if len(metadata_keys) == 0: return
+
+    pops_id = load_pops()
+    for src in pops:
+        for dst in pops:
+            if src == dst: continue
+            #print(">>>>> DATA >>>>>", src, "->", dst, "("+test_type+")")
+        
+            lat, lon, src_cod = pops_id[src]
+            dst_cod = pops_id[dst][2]
+
+            get_events_data(hash_mk[src+dst], lat, lon, src, dst, src_cod, dst_cod, path, event_type, test_type, time_start, time_end)
+
+            print("<<<<< DATA <<<<<", src, "->", dst, "("+test_type+")")
 
 
+# YYYYMMDD to epoch
+# end=True vai ate o final daquela data
+def date_to_epoch(date, end=False):
+    if date is None: return
 
+    year = int(date[:4])
+    month = int(date[4:6])
+    day = int(date[6:])
+
+    if not end: return int(datetime.datetime(year, month, day, 0, 0, 0).timestamp())
+
+    return int(datetime.datetime(year, month, day+1, 0, 0, 0).timestamp()) -1
 
 if __name__ == "__main__":
     def help():
         print("###### TIP ######")
-        print("Forneca os parametros: source, destination, test-type, event-type(opcional).")
-        print("\tsource: sigla estado de origem.")
-        print("\tdestination: sigla estado de destino.")
-        print("\ttest-type: deve ser uma das seguintes opcoes-> atraso_bi, atraso_uni, traceroute, banda_bbr, banda_cubic.")
-        print("\tevent-type: deve ser um evento que aquele teste possui.\n")
-        print("Ex1: python3 get_full_data.py df sp banda_bbr")
-        print("Ex2: python3 get_full_data.py df sp banda_bbr throughput")
+        print("Forneca os parametros: source, destination, test-type, event-type(opcional), time-end(opcional).")
+        print("\ttime-start: Data a partir da qual os dados serao pegos, deve estar no formato YYYYMMDD")
+        print("\ttest-type: deve ser uma das seguintes opcoes-> atraso_bidir, atraso_unidir, traceroute, banda_bbr, banda_cubic.")
+        print("\tevent-type: deve ser um evento que aquele teste possui.")
+        print("\ttime-end: date ate a qual os dados serao pegos(inclusivo). 20210626 pegara dados ate 26/06/2021 23:59:59")
+        print("------------------------------------------------------------------------------------------------------------------------")
+        print("Ex1: python3 get_full_data.py --time-start 20210601 --test-type atraso_bidir")
+        print("Ex2: python3 get_full_data.py --time-start 20210601 --test-type atraso_bidir --event-type histogram-rtt")
+        print("Ex3: python3 get_full_data.py --time-start 20210601 --time-end 20210905 --test-type atraso_bidir")
+        print("Ex4: python3 get_full_data.py --time-start 20210601 --time-end 20210905 --test-type atraso_bidir --event-type histogram-rtt")
         print("###### END ######")
+        sys.exit(1)
 
-    args = sys.argv[1:] # o primeiro arg eh o nome do programa
+    date_start = None
+    test_type = None
     event_type = None
-    if len(args) < 3:
+    date_end = None
+    try:
+        opts, args = getopt.getopt(sys.argv[1:],None,["time-start=","time-end=","test-type=","event-type="])
+    except getopt.GetoptError as err:
+        print(err)
         help()
-        sys.exit(1)
-    elif len(args) == 3:
-        src, dst, test_type = args
-    elif len(args) == 4:
-        src, dst, test_type, event_type = args
+        
+    for opt, arg in opts:
+        if opt in ("--time-start"):
+            date_start = arg
+        elif opt in ("--time-end"):
+            date_end = arg
+        elif opt in ("--test-type"):
+            test_type = arg
+        elif opt in ("--event-type"):
+            event_type = arg
 
-    if src == dst:
-        print("Erro: A origem e o destino devem ser diferentes.")
+    if not (date_start and test_type):
+        print("not date_start and test_type")
         help()
-        sys.exit(1)
+
+    time_start = date_to_epoch(date_start)
+    time_end = date_to_epoch(date_end, end=True) # pega epoch ate date_end 23:59:59
+
+    # print("time-start:", time_start)
+    # print("time-end:", time_end)
+    # print("test-type:", test_type)
+    # print("event-type:", event_type)
+
 
     test_types = {
-        "atraso_bi": ("Atraso e Perda de pacotes", "event-type=histogram-rtt"), # test name, test id(parametro que identifica o teste)
-        "atraso_uni": ("Atraso unidirecional", "event-type=histogram-owdelay"),
-        "traceroute":("Traceroute", "event-type=packet-trace"),
-        "banda_bbr": ("Banda(BBR)", "bw-target-bandwidth=10000000000"),
-        "banda_cubic": ("Banda(CUBIC)", "bw-target-bandwidth=9999999999")
+        "atraso_bidir": ("atraso_bidir", "event-type=histogram-rtt"), # test name, test id(parametro que identifica o teste)
+        "atraso_unidir": ("atraso_unidir", "event-type=histogram-owdelay"),
+        "traceroute":("traceroute", "event-type=packet-trace"),
+        "banda_bbr": ("banda_bbr", "bw-target-bandwidth=10000000000"),
+        "banda_cubic": ("banda_cubic", "bw-target-bandwidth=9999999999")
         }
 
     if test_type not in test_types:
         print("ERRO: " + test_type + " não eh um teste valido!")
         help()
-        sys.exit(1)
 
     interfaces = {
-        "atraso_bi": "atraso",
-        "atraso_uni": "atraso",
+        "atraso_bidir": "atraso",
+        "atraso_unidir": "atraso",
         "traceroute":"atraso",
         "banda_bbr": "banda",
         "banda_cubic": "banda"
         }
 
     path, test_id = test_types[test_type]
-    #path += "/" + src + "/" + dst
     interface = interfaces[test_type]
-    #create_folders(path)
-    main(src, dst, interface, test_id, path, event_type, test_type)
+
+    main(interface, test_id, path, event_type, test_type, time_start, time_end)
