@@ -371,14 +371,14 @@ def main(interface, test_id, path, event_type, test_type, time_start, time_end):
     for src in pops:
         for dst in pops:
             if src == dst: continue
-            #print(">>>>> DATA >>>>>", src, "->", dst, "("+test_type+")")
+            #print(">>>>>>>>>>", src, "->", dst, "("+test_type+")")
         
             lat, lon, src_cod = pops_id[src]
             dst_cod = pops_id[dst][2]
 
             get_events_data(hash_mk[src+dst], lat, lon, src, dst, src_cod, dst_cod, path, event_type, test_type, time_start, time_end)
 
-            print("<<<<< DATA <<<<<", src, "->", dst, "("+test_type+")")
+            print("<<<<<<<<<<", src, "->", dst, "("+test_type+")")
 
 
 # YYYYMMDD to epoch
@@ -392,7 +392,8 @@ def date_to_epoch(date, end=False):
 
     if not end: return int(datetime.datetime(year, month, day, 0, 0, 0).timestamp())
 
-    return int(datetime.datetime(year, month, day+1, 0, 0, 0).timestamp()) -1
+    #return int(datetime.datetime(year, month, day+1, 0, 0, 0).timestamp()) -1
+    return int(datetime.datetime(year, month, day, hour=23, minute=59, second=59).timestamp())
 
 if __name__ == "__main__":
     def help():

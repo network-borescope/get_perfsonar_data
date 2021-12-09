@@ -15,7 +15,7 @@ else
 
 	else
 		echo "Erro $MYSELF: Missing parameters"
-		echo "To get data between start-date and end-date: bash $MYSELF <start-date> <end-date>"
+		echo "To get data between start-date and end-date(inclusive): bash $MYSELF <start-date> <end-date>"
 		echo "To get yesterday data: bash $MYSELF"
 		exit 1
 	fi
