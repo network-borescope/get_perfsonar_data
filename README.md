@@ -1,8 +1,8 @@
 # Executando
-``python get_full_data.py <src> <dst> <test-type>`` OR ``python get_full_data.py <src> <dst> <test-type> <event-type``
+``python get_full_data.py --time-start <time-start> --test-type <test-type> --time-end <time-end>(opcional) <event-type>(opcional)``
 
-- src: sigla do estado de origem
-- dst: sigla do estado de destino
+- time-start: Data a partir da qual os dados serao pegos, deve estar no formato YYYYMMDD
+- time-end: date até a qual os dados serao pegos(inclusivo). 20210626 pegara dados ate 26/06/2021 23:59:59
 - test-type: deve ser um dos tipos de teste realizado pelo PerfSonar, que são:
   - atraso_bi: Atraso e Perda de Pacotes
   - atraso_uni: Atraso unidirecional
@@ -11,10 +11,10 @@
   - banda_cubic: Banda(CUBIC)
 
 ## Exemplos
-Pega todos os dados de Banda(BBR) entre os PoPs do Distrito Federal(origem) e São Paulo(destino).
+Pega todos os dados de Banda(BBR) a partir de 01/06/2021.
 
-``python get_full_data.py df sp banda_bbr``
+``python3 get_full_data.py --time-start 20210601 --test-type banda_bbr``
 
-Pega todos os dados do evento throughput do teste Banda(BBR) entre os PoPs do Distrito Federal(origem) e São Paulo(destino).
+Pega todos os dados do evento throughput do teste Banda(BBR) a partir de 01/06/2021.
 
-``python get_full_data.py df sp banda_bbr throughput``
+``python3 get_full_data.py --time-start 20210601 --test-type banda_bbr --event-type throughput``
