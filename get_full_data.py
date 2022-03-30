@@ -298,7 +298,7 @@ def get_events_data(metadata_keys, lat, lon, src, dst, src_cod, dst_cod, path, e
     "atraso_unidir.packet-count-lost": (packet_count_lost_data, [51], int),
     "atraso_unidir.packet-count-sent": (packet_count_sent_data, [52], int),
     "atraso_unidir.packet-duplicates": (packet_duplicates_data, [53], int),
-    "atraso_unidir.packet-loss-rate": (packet_loss_rate_data, [54], mult_mil), # enviados/perdidos
+    "atraso_unidir.packet-loss-rate": (packet_loss_rate_data, [54], mult_mil), # perdidos/enviados
     "atraso_unidir.packet-reorders": (packet_reorders_data, [55], int),
 
     "traceroute.failures": (failures_data, [130], int),
@@ -329,7 +329,6 @@ def get_events_data(metadata_keys, lat, lon, src, dst, src_cod, dst_cod, path, e
             domain = test_type
             event_name = event.split("/")[-2]
             file_path = path + "/" + event_name.replace("-", "_") + "/" + src + "/" + dst
-            create_folders(file_path)
 
             if len(result2) == 0: continue # o evento nao possui dados para aquele periodo
 
@@ -338,6 +337,7 @@ def get_events_data(metadata_keys, lat, lon, src, dst, src_cod, dst_cod, path, e
                 print("\""+key+"\"")
                 continue
 
+            create_folders(file_path)
             get_data(file_path, lat, lon, src_cod, dst_cod, result2, events[key])
 
 
@@ -346,8 +346,9 @@ def get_events_data(metadata_keys, lat, lon, src, dst, src_cod, dst_cod, path, e
 def main(interface, test_id, path, event_type, test_type, time_start, time_end):
 
     hash_mk = {}
-    #pops0 = ["df", "sp"] # test
+    pops0 = ["df", "sp"] # test
     pops = ["ac","al","am","ap","ba","ce","df","es","go","ma","mg","ms","mt","pa","pb","pe","pi","pr","rj","rn","ro","rr","rs","sc","se","sp","to"]
+    pops = pops0
     
     for src in pops:
         for dst in pops:
@@ -397,8 +398,8 @@ def date_to_epoch(date, end=False):
 
 if __name__ == "__main__":
     def help():
-        print("###### TIP ######")
-        print("Forneca os parametros: source, destination, test-type, event-type(opcional), time-end(opcional).")
+        print("###### HELP ######")
+        print("Usage: python get_full_data.py --time-start <time-start> --test-type <test-type> --time-end <time-end>(opcional) <event-type>(opcional)")
         print("\ttime-start: Data a partir da qual os dados serao pegos, deve estar no formato YYYYMMDD")
         print("\ttest-type: deve ser uma das seguintes opcoes-> atraso_bidir, atraso_unidir, traceroute, banda_bbr, banda_cubic.")
         print("\tevent-type: deve ser um evento que aquele teste possui.")

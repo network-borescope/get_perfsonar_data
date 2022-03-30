@@ -4,7 +4,7 @@
 - time-start: Data a partir da qual os dados serao pegos, deve estar no formato YYYYMMDD
 - time-end: date até a qual os dados serao pegos(inclusivo). 20210626 pegara dados ate 26/06/2021 23:59:59
 - test-type: deve ser um dos tipos de teste realizado pelo PerfSonar, que são:
-  - atraso_bi: Atraso e Perda de Pacotes
+  - atraso_bidir: Atraso e Perda de Pacotes
   - atraso_uni: Atraso unidirecional
   - traceroute: Traceroute
   - banda_bbr: Banda(BBR)

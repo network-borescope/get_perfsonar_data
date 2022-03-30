@@ -14,7 +14,7 @@ else
 		END_DATE=$2
 
 	else
-		echo "Erro $MYSELF: Missing parameters"
+		echo "Erro $MYSELF: Must have 2 or 0 parameters"
 		echo "To get data between start-date and end-date(inclusive): bash $MYSELF <start-date> <end-date>"
 		echo "To get yesterday data: bash $MYSELF"
 		exit 1
