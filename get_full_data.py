@@ -346,9 +346,9 @@ def get_events_data(metadata_keys, lat, lon, src, dst, src_cod, dst_cod, path, e
 def main(interface, test_id, path, event_type, test_type, time_start, time_end):
 
     hash_mk = {}
-    pops0 = ["df", "sp"] # test
+    #pops0 = ["df", "sp"] # test
     pops = ["ac","al","am","ap","ba","ce","df","es","go","ma","mg","ms","mt","pa","pb","pe","pi","pr","rj","rn","ro","rr","rs","sc","se","sp","to"]
-    pops = pops0
+    #pops = pops0
     
     for src in pops:
         for dst in pops:
