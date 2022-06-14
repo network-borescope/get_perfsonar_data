@@ -1,11 +1,8 @@
 __pycache__
-Banda(BBR)
-Banda(CUBIC)
-Atraso e Perda de pacotes
-Atraso unidirecional
-Traceroute
 atraso_unidir
 atraso_bidir
 banda_bbr
 banda_cubic
 traceroute
+http
+dns

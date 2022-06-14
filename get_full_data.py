@@ -421,7 +421,7 @@ def main(interface, test_id, path, event_type, test_type, time_start, time_end, 
     hash_mk = {}
     pops0 = ["df", "sp"] # test
     pops = ["ac","al","am","ap","ba","ce","df","es","go","ma","mg","ms","mt","pa","pb","pe","pi","pr","rj","rn","ro","rr","rs","sc","se","sp","to"]
-    pops = pops0
+    #pops = pops0
     
     if test_id != "pscheduler-test-type=dns" and test_id != "pscheduler-test-type=http":
         for src in pops:
@@ -478,9 +478,9 @@ def main(interface, test_id, path, event_type, test_type, time_start, time_end, 
             dst_cod = None
 
             if not raw_data:
-                get_events_data(hash_mk[src+dst], lat, lon, src, dst, src_cod, dst_cod, path, event_type, test_type, time_start, time_end)
+                get_events_data(hash_mk[src], lat, lon, src, dst, src_cod, dst_cod, path, event_type, test_type, time_start, time_end)
             else:
-                get_events_data(hash_mk[src+dst], lat, lon, src, dst, src_cod, dst_cod, path, event_type, test_type, time_start, time_end, data_file_func=get_raw_data)
+                get_events_data(hash_mk[src], lat, lon, src, dst, src_cod, dst_cod, path, event_type, test_type, time_start, time_end, data_file_func=get_raw_data)
 
             print("<<<<<<<<<<", src, "->", dst, "("+test_type+")")
 
