@@ -422,7 +422,7 @@ def main(interface, test_id, path, event_type, test_type, time_start, time_end, 
     hash_mk = {}
     pops0 = ["rj", "sp"] # test
     pops = ["ac","al","am","ap","ba","ce","df","es","go","ma","mg","ms","mt","pa","pb","pe","pi","pr","rj","rn","ro","rr","rs","sc","se","sp","to"]
-    pops = pops0
+    #pops = pops0
     
     if test_id != "pscheduler-test-type=dns" and test_id != "pscheduler-test-type=http":
         for src in pops:
