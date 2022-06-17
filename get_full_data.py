@@ -234,8 +234,9 @@ def get_raw_data(path, lat, lon, src_cod, dst_cod, data, data_function_codes):
 
     
     if not f.closed:
-        print(buffer[:-2], file=f) # print buffer without the last ","
-        print("]", file=f)
+        # print(buffer[:-2], file=f) # print buffer without the last ","
+        # print("]", file=f)
+        json.dump(buffer, f, indent=2)
         f.close()
 
 
@@ -419,9 +420,9 @@ def get_events_data(metadata_keys, lat, lon, src, dst, src_cod, dst_cod, path, e
 def main(interface, test_id, path, event_type, test_type, time_start, time_end, raw_data):
 
     hash_mk = {}
-    pops0 = ["df", "sp"] # test
+    pops0 = ["rj", "sp"] # test
     pops = ["ac","al","am","ap","ba","ce","df","es","go","ma","mg","ms","mt","pa","pb","pe","pi","pr","rj","rn","ro","rr","rs","sc","se","sp","to"]
-    #pops = pops0
+    pops = pops0
     
     if test_id != "pscheduler-test-type=dns" and test_id != "pscheduler-test-type=http":
         for src in pops:
