@@ -1,7 +1,7 @@
 aws.amazon.com;1
 azure.microsoft.com;2
 discord.com;3
-eduplay.rnp.br_portal_home;4
+eduplay.rnp.br;eduplay.rnp.br_portal_home;4
 globoplay.globo.com;5
 integra.rnp.br;6
 twitter.com;7

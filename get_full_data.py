@@ -16,19 +16,19 @@ SEP = ";"
 services = {}
 dns_servers = {}
 
-
-def load_services(filename="services.txt"):
+# Load services and dns_servers from file
+def load_dict(_dict, filename):
     with open(filename, "r") as f:
         for line in f:
-            key, val = line.strip().split(";") # hostname;id
-            services[key] = val
-
-def load_dns_servers(filename="dns_servers.txt"):
-    with open(filename, "r") as f:
-        for line in f:
-            key, val = line.strip().split(";") # server_IP;id
-            dns_servers[key] = val
+            items = line.strip().split(";")
             
+            if len(items) < 2:
+                print("Error loading file " + filename)
+                sys.exit(1)
+            
+            val = items[-1]
+            for key in items[:-1]:
+                _dict[key] = val
 
 def create_folders(path):
     full_path = ""
@@ -298,17 +298,26 @@ def get_data(path, lat, lon, src_cod, dst_cod, data, data_function_codes):
         line_sufix = SEP + src_cod + SEP + dst_cod
         results = data_function(item)
 
-        if len(codes) != len(results):
-            print("Fatal Erro 249")
-            return
+        if codes is not None:
+            if len(codes) != len(results):
+                print("Fatal Erro 249")
+                return
 
-        for i in range(len(codes)):
-            #v = results[i]
-            v = convert_function(results[i])
-            code = codes[i]
-            line = line_prefix + str(v) + line_sufix + SEP + str(code)
+            for i in range(len(codes)):
+                v = convert_function(results[i])
+                code = codes[i]
+                line = line_prefix + str(v) + line_sufix + SEP + str(code)
 
+                print(line, file=f)
+        else:
+            if len(results) != 1:
+                print("Fatal Erro 250")
+                return
+            
+            v = convert_function(results[0])
+            line = line_prefix + str(v) + line_sufix
             print(line, file=f)
+
 
     if not f.closed:
         f.close()
@@ -401,9 +410,9 @@ def get_events_data(metadata_keys, lat, lon, src, dst, src_cod, dst_cod, path, e
 
     "traceroute.failures": (failures_data, [130], int),
     "traceroute.packet-trace": (packet_trace_data, [131, 132, 133, 134, 135], mult_mil),
-    "dns.pscheduler-raw": (dns_pscheduler_data, [140], int),
+    "dns.pscheduler-raw": (dns_pscheduler_data, None, int),
     #"dns.pscheduler-run-href": (, [151], None),
-    "http.pscheduler-raw": (http_pscheduler_data, [150], int),
+    "http.pscheduler-raw": (http_pscheduler_data, None, int),
     #"http.pscheduler-run-href": (, [151], None),
     # "traceroute.time-error-estimates": (time_error_estimates_data, [], func),
     # "traceroute.path-mtu": (path_mtu_data, [], func),
@@ -657,7 +666,7 @@ if __name__ == "__main__":
     path, test_id = test_types[test_type]
     interface = interfaces[test_type]
 
-    load_services()
-    load_dns_servers()
-    
+    load_dict(services, "services.txt")
+    load_dict(dns_servers, "dns_servers.txt")
+
     main(interface, test_id, path, event_type, test_type, time_start, time_end, raw_data)
