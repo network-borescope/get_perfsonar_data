@@ -12,6 +12,23 @@ FUSO_BRASIL = 10800 # precisa tirar a diferenca do gmtime
 SITE = "http://monipe-central.rnp.br"
 BASE = SITE+"/esmond/perfsonar/archive"
 SEP = ";"
+#pops_id = {}
+services = {}
+dns_servers = {}
+
+
+def load_services(filename="services.txt"):
+    with open(filename, "r") as f:
+        for line in f:
+            key, val = line.strip().split(";") # hostname;id
+            services[key] = val
+
+def load_dns_servers(filename="dns_servers.txt"):
+    with open(filename, "r") as f:
+        for line in f:
+            key, val = line.strip().split(";") # server_IP;id
+            dns_servers[key] = val
+            
 
 def create_folders(path):
     full_path = ""
@@ -35,22 +52,42 @@ def load_pops(filename="pop_lat_lon.txt"):
     return pops
 
 
-def dns_pscheduler_data(item):
-    return item["val"]
-
-def http_pscheduler_data(item):
-    return item["val"]
-
-
 def div_mil(val):
     return int(val / 1000 + 0.5)
 
 def mult_mil(val):
     return int(val * 1000 + 0.5)
 
+def pts2mls(time):
+    time = time[2:-1] # remove "PT" and "S"
+    sec = float(time)
+
+    mls = sec * 1000
+    return mls
+ 
+
+
 # eventos multivalorados: o campo val eh uma lista ou um objeto
 def failures_data(item):
     return [2]
+
+
+def process_dns(item):
+    mls = pts2mls(item["val"]["time"])
+    # Do something with item["val"]["record"]
+    return [mls]
+
+def dns_pscheduler_data(item):
+    return process_dns(item)
+
+
+def process_http(item):
+    mls = pts2mls(item["val"]["time"])
+    return [mls]
+
+def http_pscheduler_data(item):
+    return process_http(item)
+
 
 def process_subinterval(subinterval):
     v_min = 100000000
@@ -298,11 +335,11 @@ def get_metadata_keys_info(data, metadata_keys:dict):
         metadata_keys[obj["metadata-key"]]["events_summaries_uri"] = []
         
         if "pscheduler-http-url" in obj: # http
-            metadata_keys[obj["metadata-key"]]["dst"] = obj["pscheduler-http-url"]
+            metadata_keys[obj["metadata-key"]]["http_dst"] = obj["pscheduler-http-url"]
         
         elif ("pscheduler-dns-query" in obj) and ("pscheduler-dns-nameserver" in obj): # dns
             metadata_keys[obj["metadata-key"]]["dns_query"] = obj["pscheduler-dns-query"]
-            metadata_keys[obj["metadata-key"]]["dst"] = obj["pscheduler-dns-nameserver"]
+            metadata_keys[obj["metadata-key"]]["dns_dst"] = obj["pscheduler-dns-nameserver"]
 
         for event in obj["event-types"]:
             if metadata_keys[obj["metadata-key"]]["last_update"] is None:
@@ -364,9 +401,9 @@ def get_events_data(metadata_keys, lat, lon, src, dst, src_cod, dst_cod, path, e
 
     "traceroute.failures": (failures_data, [130], int),
     "traceroute.packet-trace": (packet_trace_data, [131, 132, 133, 134, 135], mult_mil),
-    "dns.pscheduler-raw": (dns_pscheduler_data, [140], None),
+    "dns.pscheduler-raw": (dns_pscheduler_data, [140], int),
     #"dns.pscheduler-run-href": (, [151], None),
-    "http.pscheduler-raw": (http_pscheduler_data, [150], None),
+    "http.pscheduler-raw": (http_pscheduler_data, [150], int),
     #"http.pscheduler-run-href": (, [151], None),
     # "traceroute.time-error-estimates": (time_error_estimates_data, [], func),
     # "traceroute.path-mtu": (path_mtu_data, [], func),
@@ -380,19 +417,51 @@ def get_events_data(metadata_keys, lat, lon, src, dst, src_cod, dst_cod, path, e
     str_limit = "&limit=" + str(1000000000)
 
     for metadata_key in metadata_keys:       
+        dns_query = None
         # site accessed in http and resolved by dns
-        if "dst" in metadata_keys[metadata_key]:
-            dst = metadata_keys[metadata_key]["dst"]
+        if "http_dst" in metadata_keys[metadata_key]:
+            dst = metadata_keys[metadata_key]["http_dst"]
             
             pos = dst.find(":")
             if pos != -1: dst = dst[pos+3:]
             if dst[-1] == "/": dst = dst[:-1]
             
             dst = dst.replace("/", "_") # must replace "/" to be able to create folder
-        
-        dns_query = None
-        if "dns_query" in metadata_keys[metadata_key]:
+
+            if dst in services:
+                dst_cod = services[dst]
+            else:
+                print("Unknow service: {}".format(dst))
+                continue
+        elif "dns_dst" in metadata_keys[metadata_key] and "dns_query" in metadata_keys[metadata_key]:
+            # DNS DST (DNS Server)
+            dst = metadata_keys[metadata_key]["dns_dst"]
+            if dst in dns_servers:
+                dst_cod = dns_servers[dst]
+            else:
+                print("Unkown DNS Server: {}".format(dst))
+                continue
+            
+            
+            
+            # DNS Query (Service)
             dns_query = metadata_keys[metadata_key]["dns_query"]
+
+            pos = dns_query.find(":")
+            if pos != -1: dns_query = dns_query[pos+3:]
+            if dns_query[-1] == "/": dns_query = dns_query[:-1]
+            
+            dns_query = dns_query.replace("/", "_") # must replace "/" to be able to create folder
+
+            
+
+            if dns_query in services:
+                dst_cod = "{};{}".format(dst_cod, services[dns_query])
+            else:
+                print("Unknow service: {}".format(dns_query))
+                continue
+
+        #print("DNS Query: {}, DST: {}, DST CODE: {}".format(dns_query, dst, dst_cod))
         
         for event in metadata_keys[metadata_key]["events_base_uri"]:
             if event_type is not None and event_type+"/" not in event: continue
@@ -430,7 +499,7 @@ def main(interface, test_id, path, event_type, test_type, time_start, time_end, 
     hash_mk = {}
     pops0 = ["rj", "sp"] # test
     pops = ["ac","al","am","ap","ba","ce","df","es","go","ma","mg","ms","mt","pa","pb","pe","pi","pr","rj","rn","ro","rr","rs","sc","se","sp","to"]
-    pops = pops0
+    #pops = pops0
     
     if test_id != "pscheduler-test-type=dns" and test_id != "pscheduler-test-type=http":
         for src in pops:
@@ -511,7 +580,7 @@ def date_to_epoch(date, end=False):
 if __name__ == "__main__":
     def help():
         print("###### TIP ######")
-        print("Forneca os parametros: source, destination, test-type, event-type(opcional), time-end(opcional).")
+        print("Forneca os parametros: source, destination, test-type, event-type(opcional), time-end(opcional), raw-data(opcional).")
         print("\ttime-start: Data a partir da qual os dados serao pegos, deve estar no formato YYYYMMDD")
         print("\ttest-type: deve ser uma das seguintes opcoes-> atraso_bidir, atraso_unidir, traceroute, banda_bbr, banda_cubic.")
         print("\tevent-type: deve ser um evento que aquele teste possui.")
@@ -588,4 +657,7 @@ if __name__ == "__main__":
     path, test_id = test_types[test_type]
     interface = interfaces[test_type]
 
+    load_services()
+    load_dns_servers()
+    
     main(interface, test_id, path, event_type, test_type, time_start, time_end, raw_data)
