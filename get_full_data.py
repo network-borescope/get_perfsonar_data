@@ -280,9 +280,7 @@ def build_url(src, dst, interface, test_id, time_start):
     source = "monipe-"+src+"-"+interface+".rnp.br"
     str_time_start = "time-start="+str(time_start)
 
-    if test_id == "pscheduler-test-type=dns":
-        url = BASE + "/" + "?measurement-agent="+source+"&"+test_id+"&"+str_time_start
-    elif test_id == "pscheduler-test-type=http":
+    if test_id == "pscheduler-test-type=dns" or test_id == "pscheduler-test-type=http":
         url = BASE + "/" + "?measurement-agent="+source+"&"+test_id+"&"+str_time_start
     else:
         destination = "monipe-"+dst+"-"+interface+".rnp.br"
@@ -298,9 +296,12 @@ def get_metadata_keys_info(data, metadata_keys:dict):
         metadata_keys[obj["metadata-key"]]["last_update"] = None
         metadata_keys[obj["metadata-key"]]["events_base_uri"] = []
         metadata_keys[obj["metadata-key"]]["events_summaries_uri"] = []
-        if "pscheduler-http-url" in obj:
+        
+        if "pscheduler-http-url" in obj: # http
             metadata_keys[obj["metadata-key"]]["dst"] = obj["pscheduler-http-url"]
-        elif "pscheduler-dns-nameserver" in obj:
+        
+        elif ("pscheduler-dns-query" in obj) and ("pscheduler-dns-nameserver" in obj): # dns
+            metadata_keys[obj["metadata-key"]]["dns_query"] = obj["pscheduler-dns-query"]
             metadata_keys[obj["metadata-key"]]["dst"] = obj["pscheduler-dns-nameserver"]
 
         for event in obj["event-types"]:
@@ -378,8 +379,8 @@ def get_events_data(metadata_keys, lat, lon, src, dst, src_cod, dst_cod, path, e
     if time_end is not None: str_time_end = "&time-end=" + str(time_end)
     str_limit = "&limit=" + str(1000000000)
 
-    for metadata_key in metadata_keys:
-        # dst in http and dns data
+    for metadata_key in metadata_keys:       
+        # site accessed in http and resolved by dns
         if "dst" in metadata_keys[metadata_key]:
             dst = metadata_keys[metadata_key]["dst"]
             
@@ -388,6 +389,10 @@ def get_events_data(metadata_keys, lat, lon, src, dst, src_cod, dst_cod, path, e
             if dst[-1] == "/": dst = dst[:-1]
             
             dst = dst.replace("/", "_") # must replace "/" to be able to create folder
+        
+        dns_query = None
+        if "dns_query" in metadata_keys[metadata_key]:
+            dns_query = metadata_keys[metadata_key]["dns_query"]
         
         for event in metadata_keys[metadata_key]["events_base_uri"]:
             if event_type is not None and event_type+"/" not in event: continue
@@ -398,13 +403,16 @@ def get_events_data(metadata_keys, lat, lon, src, dst, src_cod, dst_cod, path, e
             if response_check(url, response.status_code): continue
             
             result2 = response.json()
+            if len(result2) == 0: continue # o evento nao possui dados para aquele periodo
 
 
             domain = test_type
             event_name = event.split("/")[-2]
-            file_path = path + "/" + event_name.replace("-", "_") + "/" + src + "/" + dst
+            if dns_query is None:
+                file_path = path + "/" + event_name.replace("-", "_") + "/" + src + "/" + dst
+            else:
+                file_path = path + "/" + event_name.replace("-", "_") + "/" + src + "/" + dst + "/" + dns_query
 
-            if len(result2) == 0: continue # o evento nao possui dados para aquele periodo
 
             key = domain + "." + event_name
             if key not in events:
@@ -422,7 +430,7 @@ def main(interface, test_id, path, event_type, test_type, time_start, time_end, 
     hash_mk = {}
     pops0 = ["rj", "sp"] # test
     pops = ["ac","al","am","ap","ba","ce","df","es","go","ma","mg","ms","mt","pa","pb","pe","pi","pr","rj","rn","ro","rr","rs","sc","se","sp","to"]
-    #pops = pops0
+    pops = pops0
     
     if test_id != "pscheduler-test-type=dns" and test_id != "pscheduler-test-type=http":
         for src in pops:
