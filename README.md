@@ -26,5 +26,5 @@ Coleta todos os dados do evento throughput do teste Banda(BBR) a partir de 01/06
 Coleta os dados brutos do teste traceroute de 01/10/2021 até 31/10/2021.
 
 ``
-python3 get_full_data.py --test-type traceroute --time-start 20211001 --time-end 20211031 --raw-data
+python3 get_full_data.py --time-start 20211001 --time-end 20211031 --test-type traceroute --raw-data
 ``
