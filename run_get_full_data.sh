@@ -34,3 +34,7 @@ echo "Getting Atraso unidirecional data"
 python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type atraso_unidir &
 echo "Getting Traceroute data"
 python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type traceroute &
+echo "Getting Http data"
+python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type http --raw-data &
+echo "Getting Dns data"
+python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type dns --raw-data &
