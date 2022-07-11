@@ -25,16 +25,32 @@ fi
 #echo ${END_DATE}
 
 echo "Getting Banda BBR data"
-python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type banda_bbr &
+python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type banda_bbr --event-type throughput &
+
+
 echo "Getting Banda CUBIC data"
-python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type banda_cubic &
+python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type banda_cubic --event-type throughput &
+
+
 echo "Getting Atraso e Perda de pacotes data"
-python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type atraso_bidir &
+python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type atraso_bidir --event-type histogram-rtt &
+python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type atraso_bidir --event-type histogram-ttl-reverse &
+python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type atraso_bidir --event-type packet-loss-rate-bidir &
+
+
 echo "Getting Atraso unidirecional data"
-python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type atraso_unidir &
+python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type atraso_unidir --event-type histogram-owdelay &
+python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type atraso_unidir --event-type histogram-ttl &
+python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type atraso_unidir --event-type packet-loss-rate &
+
+
 echo "Getting Traceroute data"
-python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type traceroute &
+python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type traceroute --event-type packet-trace &
+
+
 echo "Getting Http data"
-python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type http --raw-data &
+python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type http &
+
+
 echo "Getting Dns data"
-python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type dns --raw-data &
+python3 get_full_data.py --time-start ${START_DATE} --time-end ${END_DATE} --test-type dns &
