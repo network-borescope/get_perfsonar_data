@@ -28,3 +28,4 @@ www.trivago.com.br;27
 www.vivo.com.br;28
 www.whatsapp.com;29
 www.youtube.com;30
+example.net;255
