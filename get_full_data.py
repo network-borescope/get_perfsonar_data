@@ -475,8 +475,7 @@ def get_events_data(metadata_keys, lat, lon, src, dst, src_cod, dst_cod, path, e
         for event in metadata_keys[metadata_key]["events_base_uri"]:
             if event_type is not None and event_type+"/" not in event: continue
 
-
-            url = BASE+event+str_time_start+str_time_end+str_limit
+            url = SITE+event+str_time_start+str_time_end+str_limit
             response = requests.get(url) # pega todos os dados daquele evento
             if response_check(url, response.status_code): continue
             
