@@ -11,6 +11,7 @@ FUSO_BRASIL = 10800 # precisa tirar a diferenca do gmtime
 SITE = "http://monipe-central.rnp.br"
 BASE = SITE+"/esmond/perfsonar/archive"
 SEP = ";"
+POPS = ["ac","al","am","ap","ba","ce","df","es","go","ma","mg","ms","mt","pa","pb","pe","pi","pr","rj","rn","ro","rr","rs","sc","se","sp","to"]
 #pops_id = {}
 services = {}
 dns_servers = {}
@@ -242,7 +243,7 @@ def save_raw_data(path, lat, lon, src_cod, dst_cod, data, data_function_codes):
     buffer = [] # data of the same day
     for item in data:
         date = str(time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(item["ts"] - FUSO_BRASIL)))
-        item["ts"] = date # formated date
+        #item["ts"] = date # formated date
 
         new_filename = date.split(" ")[0].replace("-", "")
 
@@ -488,16 +489,16 @@ def get_events_data(metadata_keys, lat, lon, src, dst, src_cod, dst_cod, path, e
 
 
 
-def main(interface, test_id, path, event_type, test_type, time_start, time_end, raw_data):
+def main(interface, test_id, path, sources, destinations, event_type, test_type, time_start, time_end, raw_data):
 
     hash_mk = {}
-    pops0 = ["rj", "sp"] # test
-    pops = ["ac","al","am","ap","ba","ce","df","es","go","ma","mg","ms","mt","pa","pb","pe","pi","pr","rj","rn","ro","rr","rs","sc","se","sp","to"]
+    #pops0 = ["rj", "sp"] # test
+    #pops = ["ac","al","am","ap","ba","ce","df","es","go","ma","mg","ms","mt","pa","pb","pe","pi","pr","rj","rn","ro","rr","rs","sc","se","sp","to"]
     #pops = pops0
     
     if test_id != "pscheduler-test-type=dns" and test_id != "pscheduler-test-type=http":
-        for src in pops:
-            for dst in pops:
+        for src in sources:
+            for dst in destinations:
                 if src == dst: continue
                 
                 key = src + dst
@@ -515,8 +516,8 @@ def main(interface, test_id, path, event_type, test_type, time_start, time_end, 
         if len(metadata_keys) == 0: return
 
         pops_id = load_pops()
-        for src in pops:
-            for dst in pops:
+        for src in sources:
+            for dst in destinations:
                 if src == dst: continue
                 #print(">>>>>>>>>>", src, "->", dst, "("+test_type+")")
             
@@ -532,7 +533,7 @@ def main(interface, test_id, path, event_type, test_type, time_start, time_end, 
     
     else:
         dst = None # must get dst from object returned in step 1 of query
-        for src in pops:
+        for src in sources:
             key = src
             url = build_url(src, None, interface, test_id, time_start)
             response = requests.get(url)
@@ -545,7 +546,7 @@ def main(interface, test_id, path, event_type, test_type, time_start, time_end, 
             hash_mk[key] = metadata_keys
             
         pops_id = load_pops()
-        for src in pops:
+        for src in sources:
             lat, lon, src_cod = pops_id[src]
             dst_cod = None
 
@@ -574,11 +575,14 @@ def date_to_epoch(date, end=False):
 if __name__ == "__main__":
     def help():
         print("###### TIP ######")
-        print("Forneca os parametros: source, destination, test-type, event-type(opcional), time-end(opcional), raw-data(opcional).")
+        print("Forneca os parametros: sources, destinations, test-type, event-type(opcional), time-end(opcional), raw-data(opcional).")
+        print("\tsources: Lista de origens da medição separado por vírgula.")
+        print("\tdestinations: Lista de destinos da medição separado por vírgula. (ignorado nos test-type http e dns)")
         print("\ttime-start: Data a partir da qual os dados serao pegos, deve estar no formato YYYYMMDD")
-        print("\ttest-type: deve ser uma das seguintes opcoes-> atraso_bidir, atraso_unidir, traceroute, banda_bbr, banda_cubic.")
-        print("\tevent-type: deve ser um evento que aquele teste possui.")
-        print("\ttime-end: date ate a qual os dados serao pegos(inclusivo). 20210626 pegara dados ate 26/06/2021 23:59:59")
+        print("\ttime-end: Data ate a qual os dados serao pegos(inclusivo). 20210626 pegara dados ate 26/06/2021 23:59:59")
+        print("\ttest-type: Deve ser uma das seguintes opcoes-> atraso_bidir, atraso_unidir, traceroute, banda_bbr, banda_cubic, http, dns.")
+        print("\tevent-type: Deve ser um evento que aquele teste possui.")
+        print("\traw-data: Dados no formato original. (default é padrão tinycubes)")
         print("------------------------------------------------------------------------------------------------------------------------")
         print("Ex1: python3 get_full_data.py --time-start 20210601 --test-type atraso_bidir")
         print("Ex2: python3 get_full_data.py --time-start 20210601 --test-type atraso_bidir --event-type histogram-rtt")
@@ -587,19 +591,26 @@ if __name__ == "__main__":
         print("###### END ######")
         sys.exit(1)
 
+    sources = None
+    destinations = None
     date_start = None
     test_type = None
     event_type = None
     date_end = None
     raw_data = False
     try:
-        opts, args = getopt.getopt(sys.argv[1:],None,["time-start=","time-end=","test-type=","event-type=","raw-data"])
+        opts, args = getopt.getopt(sys.argv[1:],None,["sources=","destinations=","time-start=","time-end=","test-type=","event-type=","raw-data"])
     except getopt.GetoptError as err:
         print(err)
         help()
         
     for opt, arg in opts:
-        if opt in ("--time-start"):
+        if opt in ("--sources"):
+            sources = arg.replace(" ", "").split(",")
+        elif opt in ("--destinations"):
+            print(arg)
+            destinations = arg.replace(" ", "").split(",")
+        elif opt in ("--time-start"):
             date_start = arg
         elif opt in ("--time-end"):
             date_end = arg
@@ -610,14 +621,35 @@ if __name__ == "__main__":
         elif opt in ("--raw-data"):
             raw_data = True
 
-
     if not (date_start and test_type):
-        print("not date_start and test_type")
+        print("ERROR: not date_start and test_type")
         help()
+
+    # validate sources
+    if not sources:
+        print("ERROR: missing sources.")
+        help()
+    for source in sources:
+        if source not in POPS:
+            print(f"ERROR: invalid source {source}. Expected to be one of: {POPS}")
+            help()
+
+    # validate destinations
+    if test_type not in ["dns", "http"]:
+        if not destinations:
+            print("ERROR: missing destinations")
+            help()
+        for destination in destinations:
+            if destination not in POPS:
+                print(f"ERROR: invalid destination {destination}. Expected to be one of: {POPS}")
+                help()
+    
 
     time_start = date_to_epoch(date_start)
     time_end = date_to_epoch(date_end, end=True) # pega epoch ate date_end 23:59:59
 
+    # print("sources:", sources)
+    # print("destinations:", destinations)
     # print("time-start:", time_start)
     # print("time-end:", time_end)
     # print("test-type:", test_type)
@@ -654,4 +686,4 @@ if __name__ == "__main__":
     load_dict(services, "services.txt")
     load_dict(dns_servers, "dns_servers.txt")
 
-    main(interface, test_id, path, event_type, test_type, time_start, time_end, raw_data)
+    main(interface, test_id, path, sources, destinations, event_type, test_type, time_start, time_end, raw_data)
