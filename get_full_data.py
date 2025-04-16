@@ -1,4 +1,3 @@
-from cgi import test
 import requests
 import time
 import sys
@@ -237,47 +236,34 @@ def throughput_data(item):
     return [item["val"]/1000]
 
 
-def get_raw_data(path, lat, lon, src_cod, dst_cod, data, data_function_codes):
-    f = None
+def save_raw_data(path, lat, lon, src_cod, dst_cod, data, data_function_codes):
+    f = None # file
     filename = None
-    #buffer = "" # data of the same day
     buffer = [] # data of the same day
-    # data_function = data_function_codes[0]
-    # codes = data_function_codes[1]
-    # convert_function = data_function_codes[2]
     for item in data:
         date = str(time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(item["ts"] - FUSO_BRASIL)))
         item["ts"] = date # formated date
-
 
         new_filename = date.split(" ")[0].replace("-", "")
 
         if new_filename != filename:
             if f is not None:
-                #print(buffer[:-2], file=f) # print buffer without the last ","
-                #print("]", file=f)
                 json.dump(buffer, f, indent=2)
                 f.close()
-                #buffer = ""
                 buffer = []
 
             filename = new_filename
-            f = open(path + "/" + filename + "_00_00.csv", "w")
-            #print("[", file=f)
-            # print("Gerando: " + path + "/" + filename + "_00_00.csv")
+            f = open(path + "/" + filename + "_00_00.json", "w")
         
-        #buffer += "\t" + str(item).replace("'", "\"") + ",\n"
         buffer.append(item)
 
     
     if not f.closed:
-        # print(buffer[:-2], file=f) # print buffer without the last ","
-        # print("]", file=f)
         json.dump(buffer, f, indent=2)
         f.close()
 
 
-def get_data(path, lat, lon, src_cod, dst_cod, data, data_function_codes):
+def save_data(path, lat, lon, src_cod, dst_cod, data, data_function_codes):
     f = None
     filename = None
     data_function = data_function_codes[0]
@@ -375,7 +361,7 @@ def response_check(url, response_code):
     return False
 
 
-def get_events_data(metadata_keys, lat, lon, src, dst, src_cod, dst_cod, path, event_type, test_type, time_start, time_end, data_file_func=get_data):
+def get_events_data(metadata_keys, lat, lon, src, dst, src_cod, dst_cod, path, event_type, test_type, time_start, time_end, data_file_func=save_data):
     # events = {"event_name": (data_function, codes list, aux_function)}
     events = {
     "banda_bbr.failures": (failures_data, [70], int),
@@ -540,7 +526,7 @@ def main(interface, test_id, path, event_type, test_type, time_start, time_end, 
                 if not raw_data:
                     get_events_data(hash_mk[src+dst], lat, lon, src, dst, src_cod, dst_cod, path, event_type, test_type, time_start, time_end)
                 else:
-                    get_events_data(hash_mk[src+dst], lat, lon, src, dst, src_cod, dst_cod, path, event_type, test_type, time_start, time_end, data_file_func=get_raw_data)
+                    get_events_data(hash_mk[src+dst], lat, lon, src, dst, src_cod, dst_cod, path, event_type, test_type, time_start, time_end, data_file_func=save_raw_data)
 
                 print("<<<<<<<<<<", src, "->", dst, "("+test_type+")")
     
@@ -566,7 +552,7 @@ def main(interface, test_id, path, event_type, test_type, time_start, time_end, 
             if not raw_data:
                 get_events_data(hash_mk[src], lat, lon, src, dst, src_cod, dst_cod, path, event_type, test_type, time_start, time_end)
             else:
-                get_events_data(hash_mk[src], lat, lon, src, dst, src_cod, dst_cod, path, event_type, test_type, time_start, time_end, data_file_func=get_raw_data)
+                get_events_data(hash_mk[src], lat, lon, src, dst, src_cod, dst_cod, path, event_type, test_type, time_start, time_end, data_file_func=save_raw_data)
 
             print("<<<<<<<<<<", src, "->", dst, "("+test_type+")")
 
