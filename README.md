@@ -1,8 +1,10 @@
 # Executando
 ``python3 get_full_data.py --time-start <time-start> --test-type <test-type> --time-end <time-end>(opcional) <event-type>(opcional) --raw-data(opcional)``
 
+- sources: Lista de origens da medição separado por vírgula.
+- destinations: Lista de destinos da medição separado por vírgula. (ignorado nos test-type http e dns)
 - time-start: Data a partir da qual os dados serão coletados, deve estar no formato YYYYMMDD
-- time-end: Data até a qual os dados serão coletados(inclusivo). 20210626 coletará dados até 26/06/2021 23:59:59
+- time-end: Data até a qual os dados serão coletados(inclusivo). 20250413 coletará dados até 13/04/2025 23:59:59
 - test-type: Deve ser um dos tipos de teste realizado pelo PerfSonar, que são:
   - atraso_bidir: Atraso e Perda de Pacotes
   - atraso_uni: Atraso unidirecional
@@ -15,16 +17,16 @@
 - raw-data: Uma flag que se presente faz com que os dados coletados não sejam convertidos para o padrão usado pelo Tinycubes, mantendo o dado bruto.
 
 ## Exemplos
-Coleta todos os dados de Banda(BBR) a partir de 01/06/2021.
+Coleta todos os dados (brutos) de Atraso Bidirecional a partir de 13/04/2025 para as origens POP-RJ, POP-SP e destinos POP-SC, POP-RJ.
 
-``python3 get_full_data.py --time-start 20210601 --test-type banda_bbr``
+``python3 get_full_data.py --time-start 20250413 --test-type atraso_bidir --sources 'rj,sp' --destinations 'sc,rj' --raw-data``
 
-Coleta todos os dados do evento throughput do teste Banda(BBR) a partir de 01/06/2021.
+Coleta todos os dados (brutos) do evento histogram-rtt do teste Atraso Bidirecional a partir de 13/04/2025 para as origens POP-RJ, POP-SP e destinos POP-SC, POP-RJ.
 
-``python3 get_full_data.py --time-start 20210601 --test-type banda_bbr --event-type throughput``
+``python3 get_full_data.py --time-start 20250413 --event-type histogram-rtt --test-type atraso_bidir --sources 'rj,sp' --destinations 'sc,rj' --raw-data``
 
-Coleta os dados brutos do teste traceroute de 01/10/2021 até 31/10/2021.
+Coleta os dados brutos do teste traceroute de 12/04/2025 até 14/04/2025 para as origens POP-RJ, POP-SP e destinos POP-SC, POP-RJ.
 
 ``
-python3 get_full_data.py --time-start 20211001 --time-end 20211031 --test-type traceroute --raw-data
+python3 get_full_data.py --time-start 20250413 --time-end 20250414 --test-type traceroute --sources 'rj,sp' --destinations 'sc,rj' --raw-data
 ``
