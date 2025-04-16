@@ -1,8 +1,8 @@
 # Executando
-``python3 get_full_data.py --time-start <time-start> --test-type <test-type> --time-end <time-end>(opcional) <event-type>(opcional) --raw-data(opcional)``
+``python3 get_full_data.py --sources <sources> --destinations <destinations> --time-start <time-start> --test-type <test-type> --time-end <time-end>(opcional) <event-type>(opcional) --raw-data(opcional)``
 
 - sources: Lista de origens da medição separado por vírgula.
-- destinations: Lista de destinos da medição separado por vírgula. (ignorado nos test-type http e dns)
+- destinations: Lista de destinos da medição separado por vírgula. (ignorado quando nos test-type for http ou dns)
 - time-start: Data a partir da qual os dados serão coletados, deve estar no formato YYYYMMDD
 - time-end: Data até a qual os dados serão coletados(inclusivo). 20250413 coletará dados até 13/04/2025 23:59:59
 - test-type: Deve ser um dos tipos de teste realizado pelo PerfSonar, que são:
