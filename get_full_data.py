@@ -15,6 +15,7 @@ POPS = ["ac","al","am","ap","ba","ce","df","es","go","ma","mg","ms","mt","pa","p
 #pops_id = {}
 services = {}
 dns_servers = {}
+data_path = ""
 
 # Load services and dns_servers from file
 def load_dict(_dict, filename):
@@ -31,15 +32,8 @@ def load_dict(_dict, filename):
                 _dict[key] = val
 
 def create_folders(path):
-    full_path = ""
-    for folder in path.split("/"):
-        full_path += folder + "/"
-        create_folder(full_path)
-
-def create_folder(folder):
-    try:
-        os.mkdir(folder)
-    except OSError: pass
+    full_path = os.path.join(data_path, path)
+    os.makedirs(full_path, exist_ok=True)
 
 def load_pops(filename="pop_lat_lon.txt"):
     pops = {}
@@ -245,7 +239,7 @@ def save_raw_data(path, lat, lon, src_cod, dst_cod, data, data_function_codes):
         date = str(time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(item["ts"] - FUSO_BRASIL)))
         #item["ts"] = date # formated date
 
-        new_filename = date.split(" ")[0].replace("-", "")
+        new_filename = date.split(" ")[0].replace("-", "") + "_00_00.json"
 
         if new_filename != filename:
             if f is not None:
@@ -254,7 +248,8 @@ def save_raw_data(path, lat, lon, src_cod, dst_cod, data, data_function_codes):
                 buffer = []
 
             filename = new_filename
-            f = open(path + "/" + filename + "_00_00.json", "w")
+            full_file_path = os.path.join(data_path, path, filename)
+            f = open(full_file_path, "w")
         
         buffer.append(item)
 
@@ -273,13 +268,13 @@ def save_data(path, lat, lon, src_cod, dst_cod, data, data_function_codes):
     for item in data:
         date = str(time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(item["ts"] - FUSO_BRASIL)))
 
-        new_filename = date.split(" ")[0].replace("-", "")
+        new_filename = date.split(" ")[0].replace("-", "") + "_00_00.csv"
 
         if new_filename != filename:
             if f is not None: f.close()
             filename = new_filename
-            f = open(path + "/" + filename + "_00_00.csv", "w")
-            # print("Gerando: " + path + "/" + filename + "_00_00.csv")
+            full_file_path = os.path.join(data_path, path, filename)
+            f = open(full_file_path, "w")
 
         line_prefix = date + SEP + lat + SEP + lon + SEP
         line_sufix = SEP + src_cod + SEP + dst_cod
@@ -577,17 +572,18 @@ if __name__ == "__main__":
         print("###### TIP ######")
         print("Forneca os parametros: sources, destinations, test-type, event-type(opcional), time-end(opcional), raw-data(opcional).")
         print("\tsources: Lista de origens da medição separado por vírgula.")
-        print("\tdestinations: Lista de destinos da medição separado por vírgula. (ignorado nos test-type http e dns)")
+        print("\tdestinations: Lista de destinos da medição separado por vírgula. (ignorado quando o test-type for http e dns)")
         print("\ttime-start: Data a partir da qual os dados serao pegos, deve estar no formato YYYYMMDD")
         print("\ttime-end: Data ate a qual os dados serao pegos(inclusivo). 20210626 pegara dados ate 26/06/2021 23:59:59")
         print("\ttest-type: Deve ser uma das seguintes opcoes-> atraso_bidir, atraso_unidir, traceroute, banda_bbr, banda_cubic, http, dns.")
         print("\tevent-type: Deve ser um evento que aquele teste possui.")
         print("\traw-data: Dados no formato original. (default é padrão tinycubes)")
+        print("\tdata-path: Path do diretório onde os dados serão salvos, este diretório DEVE EXISTIR.")
         print("------------------------------------------------------------------------------------------------------------------------")
-        print("Ex1: python3 get_full_data.py --time-start 20210601 --test-type atraso_bidir")
-        print("Ex2: python3 get_full_data.py --time-start 20210601 --test-type atraso_bidir --event-type histogram-rtt")
-        print("Ex3: python3 get_full_data.py --time-start 20210601 --time-end 20210905 --test-type atraso_bidir")
-        print("Ex4: python3 get_full_data.py --time-start 20210601 --time-end 20210905 --test-type atraso_bidir --event-type histogram-rtt")
+        print("Ex1: python3 get_full_data.py --time-start 20250413 --test-type atraso_bidir --sources 'rj,sp' --destinations 'sc,rj'")
+        print("Ex2: python3 get_full_data.py --time-start 20250413 --event-type histogram-rtt --test-type atraso_bidir --sources 'rj,sp' --destinations 'sc,rj'")
+        print("Ex3: python3 get_full_data.py --time-start 20250413 --time-end 20250414 --test-type traceroute --sources 'rj,sp' --destinations 'sc,rj' --raw-data")
+        print("Ex4: python3 get_full_data.py --time-start 20250413 --time-end 20250414 --test-type traceroute --sources 'rj,sp' --destinations 'sc,rj' --raw-data --data-path data")
         print("###### END ######")
         sys.exit(1)
 
@@ -599,7 +595,7 @@ if __name__ == "__main__":
     date_end = None
     raw_data = False
     try:
-        opts, args = getopt.getopt(sys.argv[1:],None,["sources=","destinations=","time-start=","time-end=","test-type=","event-type=","raw-data"])
+        opts, args = getopt.getopt(sys.argv[1:],None,["sources=","destinations=","time-start=","time-end=","test-type=","event-type=","raw-data","data-path="])
     except getopt.GetoptError as err:
         print(err)
         help()
@@ -608,7 +604,6 @@ if __name__ == "__main__":
         if opt in ("--sources"):
             sources = arg.replace(" ", "").split(",")
         elif opt in ("--destinations"):
-            print(arg)
             destinations = arg.replace(" ", "").split(",")
         elif opt in ("--time-start"):
             date_start = arg
@@ -620,6 +615,11 @@ if __name__ == "__main__":
             event_type = arg
         elif opt in ("--raw-data"):
             raw_data = True
+        elif opt in ("--data-path"):
+            data_path = arg
+            if not os.path.isdir(data_path):
+                print(f"ERROR: {data_path} does not exists.")
+                sys.exit(1)
 
     if not (date_start and test_type):
         print("ERROR: not date_start and test_type")
