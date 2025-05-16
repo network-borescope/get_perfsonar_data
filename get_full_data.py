@@ -508,7 +508,7 @@ def main(interface, test_id, path, sources, destinations, event_type, test_type,
                 get_metadata_keys_info(result1, metadata_keys)
                 hash_mk[key] = metadata_keys
             
-        if len(metadata_keys) == 0: return
+        if len(hash_mk) == 0: return
 
         pops_id = load_pops()
         for src in sources:
